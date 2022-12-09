@@ -14,11 +14,5 @@ MongoClient.connect(
     }
 
     const db = client.db(databaseName);
-
-    db.collection('tasks').deleteOne({description: 'second task'}).then(result => {
-      console.log(result);
-    }).catch(error => {
-      console.log(error);
-    })
   }
 );
