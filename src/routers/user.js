@@ -2,11 +2,27 @@ const User = require("../models/user");
 const express = require("express");
 const auth = require('../middleware/auth');
 const multer = require('multer');
-// const path = require('path');
 const sharp = require('sharp');
+const {sendWelcomeEmail, sendDeleteAccounEmail} = require('../emails/account');
 
 
 const router = new express.Router();
+
+
+const upload = multer({
+  limits: {
+    fileSize: 100000
+  },
+  fileFilter(req, file, cb) {
+    if(!file.originalname.match(/\.(jpg|png|jpeg)$/)) {
+      return cb(new Error('please upload jpg, jpeg or png'));
+    }
+
+    cb(undefined, true);
+  }
+})
+
+
 
 
 router.post("/users", async (req, res) => {
@@ -14,6 +30,7 @@ router.post("/users", async (req, res) => {
 
   try {
     await user.save();
+    sendWelcomeEmail(user.email, user.name);
     const token = await user.generateAuthToken();
     res.status(201).send({user, token});
   } catch (error) {
@@ -99,7 +116,7 @@ router.patch("/users", auth, async (req, res) => {
     
     await req.user.save();
     
-    if (!user) {
+    if (!req.user) {
       return res.status(404).send({ error: "user  not found" });
     }
 
@@ -110,29 +127,14 @@ router.patch("/users", auth, async (req, res) => {
 });
 
 router.delete("/users", auth, async (req, res) => {
-  const id = req.params.id;
-
   try {
     await req.user.remove();
-
+    sendDeleteAccounEmail(req.user.email, req.user.name);
     res.status(200).send({ user: req.user, message: "User delete successfully" });
   } catch (error) {
     res.status(400).send(error);
   }
 });
-
-const upload = multer({
-  limits: {
-    fileSize: 100000
-  },
-  fileFilter(req, file, cb) {
-    if(!file.originalname.match(/\.(jpg|png|jpeg)$/)) {
-      return cb(new Error('please upload jpg, jpeg or png'));
-    }
-
-    cb(undefined, true);
-  }
-})
 
 router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => {
   // req.user.avatar = req.file.buffer;
@@ -168,4 +170,5 @@ router.get('/users/:id/avatar', async (req, res) => {
   }
 
 })
+
 module.exports = router;
