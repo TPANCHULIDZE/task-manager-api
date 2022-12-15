@@ -1,29 +1,11 @@
 const request = require("supertest");
 const app = require("../src/app");
-const User = require("../src/models/user");
-const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken");
-const { use } = require("../src/app");
+const User = require('../src/models/user');
+const { userOne, userOneId, userToken, setupDatabase } = require('./fixtures/db');
 
-const userOneId = new mongoose.Types.ObjectId();
-const userOne = {
-  _id: userOneId,
-  name: "user1",
-  email: "user1@test.ge",
-  password: "testPassword",
-  tokens: [
-    {
-      token: jwt.sign({ _id: userOneId }, process.env.JWT_KEY),
-    },
-  ],
-};
+beforeEach(setupDatabase);
 
-beforeEach(async () => {
-  await User.deleteMany();
-  await new User(userOne).save();
-});
-
-it("Should sign up user success", async () => {
+xit("Should sign up user success", async () => {
   const response = await request(app)
     .post("/users")
     .send({
@@ -45,7 +27,7 @@ it("Should sign up user success", async () => {
   });
 });
 
-it("Should sign in success", async () => {
+xit("Should sign in success", async () => {
   const response = await request(app)
     .post("/users/login")
     .send({
@@ -65,7 +47,7 @@ it("Should sign in success", async () => {
   });
 });
 
-it("Should fail sign in when have invalid email", async () => {
+xit("Should fail sign in when have invalid email", async () => {
   await request(app)
     .post("/users/login")
     .send({
@@ -75,21 +57,21 @@ it("Should fail sign in when have invalid email", async () => {
     .expect(404);
 });
 
-it("Should access profile page success", async () => {
+xit("Should access profile page success", async () => {
   await request(app)
     .get("/users/me")
-    .set("Authorization", "Bearer " + userOne.tokens[0].token)
+    .set("Authorization", userToken)
     .expect(200);
 });
 
-it("Should fails access profile page with incorrect token", async () => {
+xit("Should fails access profile page with incorrect token", async () => {
   await request(app).get("/users/me").expect(401);
 });
 
-it("Should delete account successfully", async () => {
+xit("Should delete account successfully", async () => {
   const response = await request(app)
     .delete("/users")
-    .set("Authorization", "Bearer " + userOne.tokens[0].token)
+    .set("Authorization", userToken)
     .expect(200);
 
   const user = await User.findById(response.body.user._id);
@@ -104,6 +86,41 @@ it("Should delete account successfully", async () => {
   });
 });
 
-it("Should delete account successfully", async () => {
+xit("Should delete account successfully", async () => {
   await request(app).delete("/users").expect(401);
 });
+
+xit("Should upload avatar successfully", async () => {
+  await request(app)
+    .post('/users/me/avatar')
+    .set("Authorization", userToken)
+    .attach("avatar", "tests/fixtures/linux.jpg")
+    .expect(200);
+
+  const user = await User.findById(userOneId);
+  expect(user.avatar).toEqual(expect.any(Buffer));
+});
+
+xit("Should upload avatar successfully", async () => {
+  await request(app)
+    .post('/users/me/avatar')
+    .set("Authorization", userToken)
+    .attach("avatar", "tests/fixtures/chess-4.jpg")
+    .expect(400);
+});
+
+xit('Should update valid user fields', async () => {
+  await request(app).patch('/users').set('Authorization', userToken).send({
+    name: 'update user'
+  }).expect(200);
+
+  const user = await User.findById(userOneId);
+
+  expect(user.name).toBe('update user');
+})
+
+xit('Should update invalid user return 400', async () => {
+  await request(app).patch('/users/me/avatar').set('Authorization', userToken).send({
+    location: 'Kutaisi'
+  }).expect(404);
+})

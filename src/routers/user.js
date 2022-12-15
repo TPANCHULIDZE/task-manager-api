@@ -112,6 +112,7 @@ router.patch("/users", auth, async (req, res) => {
   }
 
   try {
+    
     updates.forEach(update => req.user[update] = req.body[update]);
     
     await req.user.save();
@@ -137,8 +138,6 @@ router.delete("/users", auth, async (req, res) => {
 });
 
 router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => {
-  // req.user.avatar = req.file.buffer;
-
   const buffer = await sharp(req.file.buffer).resize({width:250, height:250}).png().toBuffer();
   req.user.avatar = buffer;
   await req.user.save();
